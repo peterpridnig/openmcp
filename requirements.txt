@@ -1,0 +1,3 @@
+# Runtime dependency of webcam_mcp_server.py only.
+# webcam_grab.py itself stays stdlib-only and needs ffmpeg on PATH.
+mcp>=2.0

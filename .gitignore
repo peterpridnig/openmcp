@@ -1,0 +1,9 @@
+# captured stills / scratch output
+tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# editor/OS noise
+.DS_Store
