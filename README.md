@@ -18,7 +18,7 @@ auto-exposure settles, and save JPEG or PNG based on the output file extension.
 | `scr_python/mcp_client_check.py` | Dev helper that drives the MCP server end-to-end (initialize, list tools, call tools) |
 | `requirements.txt` | Runtime dependency of the MCP server (`mcp>=2`) |
 | `setup.sh` | Creates/recreates `.venv/` and installs `requirements.txt` into it |
-| `rund.sh` | Install/start/stop/status the MCP server as systemd service `openpaw-mcp.service` |
+| `rund.sh` | Install/start/stop/status the MCP server as systemd user service `openpaw-mcp.service` (no sudo) |
 
 ## Requirements
 
@@ -153,15 +153,16 @@ New tool groups follow the established pattern: keep the underlying logic in
 instance in `mcp/openpaw_mcp_server.py`, and raise the SDK's `ToolError` with
 an actionable message for anything that can be anticipated to fail.
 
-### Run as a system service
+### Run as a user service
 
-`./rund.sh` manages `openpaw-mcp.service` (systemd, runs as your user,
-enabled at boot). Privileged steps ask for the sudo password. Note the server
-speaks stdio: as a service it stays alive and supervised but idle — real MCP
-clients still spawn their own instance.
+`./rund.sh` manages `openpaw-mcp.service` as a systemd **user** service
+(`~/.config/systemd/user/`, controlled with `systemctl --user`) — no sudo
+required. With linger enabled it starts at boot without an active login
+session. Note the server speaks stdio: as a service it stays alive and
+supervised but idle — real MCP clients still spawn their own instance.
 
 ```bash
-./rund.sh install   # writes the unit (sudo), daemon-reload, enable
+./rund.sh install   # writes the unit, daemon-reload, enable (+ linger)
 ./rund.sh start     # start + show status
 ./rund.sh stop      # stop
 ./rund.sh status    # show status

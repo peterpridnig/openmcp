@@ -27,7 +27,7 @@ python3 scr_python/webcam_grab.py -l                 # list device formats (need
 python3 scr_python/webcam_grab.py                    # capture to tmp/webcam_<timestamp>.jpg
 python3 scr_python/webcam_grab.py -h                 # CLI help
 ./setup.sh && .venv/bin/python mcp/openpaw_mcp_server.py   # MCP stdio server
-./rund.sh {install|start|stop|status}   # manage openpaw-mcp.service (needs sudo for install/start/stop)
+./rund.sh {install|start|stop|status}   # manage openpaw-mcp.service (systemd user service, no sudo)
 ```
 
 Run with `--help` and smoke-test argument parsing rather than doing real captures when possible. To validate the MCP server without an IDE, drive it with the SDK's `mcp.client.session`/`stdio_client` client (spawn the server, initialize, `list_tools`, `call_tool`).
