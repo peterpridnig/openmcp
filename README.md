@@ -18,7 +18,6 @@ auto-exposure settles, and save JPEG or PNG based on the output file extension.
 | `scr_python/mcp_client_check.py` | Dev helper that drives the MCP server end-to-end (initialize, list tools, call tools) |
 | `requirements.txt` | Runtime dependency of the MCP server (`mcp>=2`) |
 | `setup.sh` | Creates/recreates `.venv/` and installs `requirements.txt` into it |
-| `rund.sh` | Install/start/stop/status the MCP server as systemd user service `openpaw-mcp.service` (no sudo) |
 
 ## Requirements
 
@@ -99,6 +98,10 @@ interpreter (not system `python3`), e.g.:
   | `warmup` | `10` | Frames discarded first so auto-exposure settles |
   | `quality` | `2` | ffmpeg JPEG quality scale, `1`=best .. `10`=worst |
   | `output` | `tmp/webcam_<timestamp>.jpg` | File or directory (relative paths anchor at the repo root); PNG for `.png`, JPEG otherwise |
+- **`get_weather(city="Ljubljana", unit="celsius")`** — demo tool: returns a
+  deterministic *simulated* weather line for a city (derived from the city
+  name — no network, no API key), clearly labelled as fake. Useful for
+  verifying tool round-trips without hardware.
 
 ### Error handling
 
@@ -117,9 +120,13 @@ A ready-made check script ships with the repo:
 ```
 
 `mcp_client_check.py` spawns the server over stdio, initializes a session,
-lists the tools, then calls `list_webcams()` and `capture_still()`, printing
-each result — so a green run exercises the full round-trip (including the
-saved capture under `tmp/`). Run `./setup.sh` first; paths are derived from
+lists the tools, then lets you choose which one to test from an interactive
+menu (it loops, so you can exercise several tools per session; `q` quits).
+Call it with a tool name to skip the menu and run that tool once — e.g.
+`.venv/bin/python scr_python/mcp_client_check.py get_weather` prints a
+simulated report. Exit codes: 0 = ok, 1 = a tool call failed, 2 = usage
+error — so a green run exercises the full round-trip (including the saved
+capture under `tmp/`). Run `./setup.sh` first; paths are derived from
 the script location, so it works from any checkout.
 
 Under the hood it is just the SDK's stdio client — spawn, initialize,
@@ -153,21 +160,10 @@ New tool groups follow the established pattern: keep the underlying logic in
 instance in `mcp/openpaw_mcp_server.py`, and raise the SDK's `ToolError` with
 an actionable message for anything that can be anticipated to fail.
 
-### Run as a user service
-
-`./rund.sh` manages `openpaw-mcp.service` as a systemd **user** service
-(`~/.config/systemd/user/`, controlled with `systemctl --user`) — no sudo
-required. With linger enabled it starts at boot without an active login
-session. Note the server speaks stdio: as a service it stays alive and
-supervised but idle — real MCP clients still spawn their own instance.
-
-```bash
-./rund.sh install   # writes the unit, daemon-reload, enable (+ linger)
-./rund.sh start     # start + show status
-./rund.sh stop      # stop
-./rund.sh status    # show status
-./rund.sh unit      # print the generated unit file to stdout
-```
+The server speaks stdio: an MCP client (IDE, agent, `mcp_client_check.py`)
+spawns the process per its MCP config and tears it down when done, so there is
+no service/daemon to manage. Should a network transport (e.g. streamable HTTP)
+ever be added, a long-running process would become relevant again.
 
 ## How it works
 

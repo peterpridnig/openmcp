@@ -8,6 +8,7 @@ Single-file Python CLI: `scr_python/webcam_grab.py`. It captures one still frame
 
 - `list_webcams()` — devices with supported pixel formats and sizes.
 - `capture_still()` — captures a frame, returns inline image content plus a summary line; saves to `tmp/` unless an output path is given.
+- `get_weather()` — demo tool returning deterministic simulated weather for a city (no live feed).
 
 Anticipated failures (validation, missing ffmpeg, no camera, permission) raise the SDK's `ToolError` so the model receives an actionable message instead of "Error executing tool". There is no package, no test suite. Do not introduce one unless asked.
 
@@ -26,8 +27,7 @@ python3 -m py_compile scr_python/webcam_grab.py mcp/openpaw_mcp_server.py   # sy
 python3 scr_python/webcam_grab.py -l                 # list device formats (needs a camera)
 python3 scr_python/webcam_grab.py                    # capture to tmp/webcam_<timestamp>.jpg
 python3 scr_python/webcam_grab.py -h                 # CLI help
-./setup.sh && .venv/bin/python mcp/openpaw_mcp_server.py   # MCP stdio server
-./rund.sh {install|start|stop|status}   # manage openpaw-mcp.service (systemd user service, no sudo)
+./setup.sh && .venv/bin/python mcp/openpaw_mcp_server.py   # MCP stdio server (spawned by MCP clients; no service needed)
 ```
 
 Run with `--help` and smoke-test argument parsing rather than doing real captures when possible. To validate the MCP server without an IDE, drive it with the SDK's `mcp.client.session`/`stdio_client` client (spawn the server, initialize, `list_tools`, `call_tool`).

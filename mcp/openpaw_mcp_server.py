@@ -7,6 +7,7 @@ speaks the Model Context Protocol over stdio (official Python SDK,
 
     list_webcams()   - list /dev/video* devices with formats and sizes
     capture_still()  - capture one frame, returned as inline image content
+    get_weather()    - demo tool: deterministic simulated weather for a city
 
 Run manually for debugging:
     python openpaw_mcp_server.py         # JSON-RPC over stdio
@@ -17,6 +18,7 @@ mcp/openpaw_mcp_server.py).
 from __future__ import annotations
 
 import sys
+import zlib
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -69,14 +71,16 @@ mcp = MCPServer(
     title="OpenPaw",
     description=(
         "General-purpose local MCP server (openpaw). First tool group: "
-        "still-frame capture from local Linux webcams (V4L2 via ffmpeg)."
+        "still-frame capture from local Linux webcams (V4L2 via ffmpeg); "
+        "plus a simple demo weather tool."
     ),
     instructions=(
         "Use list_webcams() first to see devices, pixel formats and sizes, "
         "then capture_still() to grab a frame. capture_still returns the "
         "image as image content plus a summary line; captures are also "
         "saved as files under the repository's tmp/ directory unless an "
-        "absolute output path is given."
+        "absolute output path is given. get_weather(city) returns "
+        "deterministic simulated demo weather - clearly not a live feed."
     ),
 )
 
@@ -268,6 +272,65 @@ def capture_still(
         f"{size_note}, warmup={warmup})"
     )
     return [Image(path=str(out)), summary]
+
+
+# --- get_weather: a deliberately simple demo tool ---------------------------
+# Simulated weather with no network access and no API keys: values are
+# derived from a stable hash of the city name, so repeated calls for the
+# same city agree while different cities differ. The output is clearly
+# labelled as fake so models never present it as a live feed.
+
+_WEATHER_CONDITIONS = (
+    "sunny",
+    "partly cloudy",
+    "overcast",
+    "drizzle",
+    "light rain",
+    "heavy rain",
+    "thunderstorm",
+    "fog",
+    "light snow",
+    "heavy snow",
+    "windy",
+    "clear night sky",
+)
+
+
+@mcp.tool(
+    description=(
+        "Return the current weather for a city as a summary line. Demo "
+        "tool: the data is deterministic simulated weather derived from "
+        "the city name (no live feed), handy for testing tool calls."
+    ),
+)
+def get_weather(
+    city: str = "Ljubljana",
+    unit: Literal["celsius", "fahrenheit"] = "celsius",
+) -> str:
+    """Return a deterministic simulated weather report for `city`."""
+    name = city.strip() if isinstance(city, str) else ""
+    if not name:
+        raise ToolError("city must be a non-empty name, e.g. 'Ljubljana'")
+
+    seed = zlib.crc32(name.lower().encode("utf-8"))
+    condition = _WEATHER_CONDITIONS[seed % len(_WEATHER_CONDITIONS)]
+    temp_c = -5.0 + ((seed >> 5) % 380) / 10.0  # -5.0 .. 32.9 °C
+    humidity = 30 + (seed >> 8) % 66            # 30 .. 95 %
+    wind_kmh = (seed >> 12) % 61                # 0 .. 60 km/h
+    feels_c = temp_c - wind_kmh * 0.05 - (1.0 if temp_c > 20.0 else 0.0)
+
+    def fmt(temp_c: float) -> str:
+        return (
+            f"{temp_c * 9 / 5 + 32:.1f} °F"
+            if unit == "fahrenheit"
+            else f"{temp_c:.1f} °C"
+        )
+
+    return (
+        f"{name} (simulated): {condition}, {fmt(temp_c)} "
+        f"(feels like {fmt(feels_c)}), humidity {humidity}%, "
+        f"wind {wind_kmh} km/h. Demo data - not a live weather feed."
+    )
 
 
 def main() -> int:
