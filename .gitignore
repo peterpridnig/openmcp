@@ -4,6 +4,7 @@ tmp/
 # Python
 __pycache__/
 *.py[cod]
+.venv/
 
 # editor/OS noise
 .DS_Store

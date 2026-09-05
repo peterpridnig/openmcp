@@ -172,11 +172,23 @@ def grab_frame(
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
+def _find_project_root() -> Path | None:
+    """Walk up from this file to the repo root (the directory containing .git)."""
+    here = Path(__file__).resolve().parent
+    for candidate in (here, *here.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
 def resolve_output(raw_output: str | None) -> Path:
-    """Default to a timestamped JPEG under ./tmp; allow -o to pick file or dir."""
+    """Default to a timestamped JPEG under the repo's tmp/ dir (./tmp outside
+    a repo), regardless of cwd; -o picks file or dir (relative to cwd)."""
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if raw_output is None:
-        return Path("tmp") / f"webcam_{stamp}.jpg"
+        root = _find_project_root()
+        tmp_dir = root / "tmp" if root else Path("tmp")
+        return tmp_dir / f"webcam_{stamp}.jpg"
     out = Path(raw_output).expanduser()
     if str(out).endswith(("/", "/.")) or out.is_dir():
         return out / f"webcam_{stamp}.jpg"
@@ -191,7 +203,7 @@ def main() -> int:
         "-o",
         "--output",
         help="Output file path (JPEG or PNG by extension) or directory "
-        "for a timestamped JPEG. Default: tmp/webcam_<timestamp>.jpg.",
+        "for a timestamped JPEG. Default: the repo's tmp/webcam_<timestamp>.jpg.",
     )
     parser.add_argument(
         "-d",

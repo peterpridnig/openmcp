@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""MCP server exposing the local webcam as tools.
+"""OpenPaw MCP server: general-purpose local tools.
 
-Reuses the capture logic of webcam_grab.py and speaks the Model Context
-Protocol over stdio (official Python SDK, `pip install 'mcp>=2'`). Tools:
+First tool group — webcam: reuses the capture logic of webcam_grab.py and
+speaks the Model Context Protocol over stdio (official Python SDK,
+`pip install 'mcp>=2'`). Tools:
 
     list_webcams()   - list /dev/video* devices with formats and sizes
     capture_still()  - capture one frame, returned as inline image content
 
 Run manually for debugging:
-    python webcam_mcp_server.py          # JSON-RPC over stdio
+    python openpaw_mcp_server.py         # JSON-RPC over stdio
 Configure it as an MCP server entry (command: python, args: path/to/
-webcam_mcp_server.py, cwd: this directory).
+mcp/openpaw_mcp_server.py).
 """
 
 from __future__ import annotations
@@ -23,8 +24,22 @@ from typing import Literal
 from mcp.server.mcpserver import Image, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-# Import the capture CLI (same directory) whether run as a script or module.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# Import the capture CLI from ../scr_python (fallback: same directory,
+# whether run as a script or module).
+_here = Path(__file__).resolve().parent
+_scr_python = next(
+    (
+        p
+        for p in (_here, _here.parent / "scr_python")
+        if (p / "webcam_grab.py").exists()
+    ),
+    _here.parent / "scr_python",
+)
+if not (_scr_python / "webcam_grab.py").exists():
+    raise ImportError(
+        f"webcam_grab.py not found in {_here} or {_here.parent / 'scr_python'}"
+    )
+sys.path.insert(0, str(_scr_python))
 
 from webcam_grab import (  # noqa: E402
     SIZE_RE,
@@ -37,14 +52,24 @@ from webcam_grab import (  # noqa: E402
     probe_formats,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+def _find_project_root() -> Path:
+    """Walk up from this file to the repo root (the directory containing .git)."""
+    here = Path(__file__).resolve().parent
+    for candidate in (here, *here.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return here
+
+
+PROJECT_ROOT = _find_project_root()
 DEFAULT_CAPTURE_DIR = PROJECT_ROOT / "tmp"
 
 mcp = MCPServer(
-    name="webcam",
-    title="Webcam",
+    name="openpaw",
+    title="OpenPaw",
     description=(
-        "Still-frame capture from local Linux webcams (V4L2 via ffmpeg)."
+        "General-purpose local MCP server (openpaw). First tool group: "
+        "still-frame capture from local Linux webcams (V4L2 via ffmpeg)."
     ),
     instructions=(
         "Use list_webcams() first to see devices, pixel formats and sizes, "
